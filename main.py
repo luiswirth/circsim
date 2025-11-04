@@ -1,5 +1,6 @@
 import math
 from dataclasses import dataclass
+from tqdm import tqdm
 
 import numpy as np
 
@@ -37,7 +38,7 @@ current_sources = [
   #[[CurrentSource(1.0, (2, 0))
 ]
 voltage_sources = [
-  VoltageSource(5.0, (2, 0))
+  VoltageSource(0.0, (2, 0))
 ]
 
 nnodes = 0
@@ -103,18 +104,18 @@ for isource, source in enumerate(voltage_sources):
   e[isource] = v
   
 Z = np.zeros((len(voltage_sources), len(voltage_sources)))
+
 A = np.block([
   [G, B],
   [B.T, Z]
 ])
 rhs = np.concatenate([b, e])
-
 v = np.linalg.solve(A, rhs)
 print(v)
 
 
 T = 2.0
-dt = 0.05
+dt = 0.005
 nsteps = int(math.ceil(T/dt))
 
 sys_mat = np.block([
@@ -123,14 +124,14 @@ sys_mat = np.block([
 ])
 
 #vinit = np.zeros(nnodes)
-vinit = np.array([1.0, 5.0])
+vinit = np.array([1.0, 0.0])
 
 vs = [vinit]
 
-for istep in range(nsteps):
-  print(f"{istep}/{nsteps-1}")
-
+for istep in tqdm(range(nsteps)):
   # TODO: update b and e
+  e[0] = math.sin(istep/(nsteps-1) * math.pi * 20)
+  
   rhs_vec = np.concatenate([
     b + (C @ vs[istep])/dt,
     e,
