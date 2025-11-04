@@ -1,3 +1,4 @@
+import math
 from dataclasses import dataclass
 
 import numpy as np
@@ -25,26 +26,25 @@ class VoltageSource:
     wire: tuple[int,int]
 
 resistors = [
-  Resistor(1/1000, (1, 2)),
-  Resistor(1/1000, (2, 0)),
+  Resistor(1, (2, 1)),
 ]
 
-condensators = [
-  #Capacitor(1.0, (1, 0))
+capacitors = [
+  Capacitor(1, (1, 0))
 ]
 
 current_sources = [
   #[[CurrentSource(1.0, (2, 0))
 ]
 voltage_sources = [
-  VoltageSource(10.0, (1, 0))
+  VoltageSource(5.0, (2, 0))
 ]
 
 nnodes = 0
 for resistor in resistors:
   nnodes = max(nnodes, max(resistor.wire))
-for condensator in condensators:
-  nnodes = max(nnodes, max(condensator.wire))
+for capacitor in capacitors:
+  nnodes = max(nnodes, max(capacitor.wire))
 for source in current_sources:
   nnodes = max(nnodes, max(source.wire))
 for source in voltage_sources:
@@ -83,10 +83,10 @@ print(G)
 
 
 C = np.zeros((nnodes, nnodes))
-for condensator in condensators:
-  i = condensator.wire[0] - 1
-  j = condensator.wire[1] - 1
-  c = condensator.capacitance
+for capacitor in capacitors:
+  i = capacitor.wire[0] - 1
+  j = capacitor.wire[1] - 1
+  c = capacitor.capacitance
   add_mat_entry(C, i, i, c)
   add_mat_entry(C, j, j, c)
   add_mat_entry(C, i, j, -c)
@@ -113,20 +113,31 @@ v = np.linalg.solve(A, rhs)
 print(v)
 
 
-#T = 2.0
-#dt = 0.05
-#nsteps = int(math.ceil(T/dt))
-#
-#sys_mat = G+C/dt
-#
-##vinit = np.zeros(nnodes)
-#vinit = np.array([1.0])
-#vs = [vinit]
-#
-#for istep in range(nsteps):
-#  # TODO: update b
-#  rhs_vec = b + (C @ vs[istep])/dt
-#  # TODO: compute factorization
-#  v = np.linalg.solve(sys_mat, rhs_vec)
-#  vs.append(v)
-#  print(f"{istep}/{nsteps-1}")
+T = 2.0
+dt = 0.05
+nsteps = int(math.ceil(T/dt))
+
+sys_mat = np.block([
+  [G+C/dt, B],
+  [B.T, Z],
+])
+
+#vinit = np.zeros(nnodes)
+vinit = np.array([1.0, 5.0])
+
+vs = [vinit]
+
+for istep in range(nsteps):
+  print(f"{istep}/{nsteps-1}")
+
+  # TODO: update b and e
+  rhs_vec = np.concatenate([
+    b + (C @ vs[istep])/dt,
+    e,
+  ])
+
+  # TODO: compute factorization
+  x = np.linalg.solve(sys_mat, rhs_vec)
+  v = x[:nnodes]
+  vs.append(v)
+
